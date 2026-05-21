@@ -2,21 +2,21 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+from app.core.database import Base, engine
+from app import models  # noqa: F401
 from app.routers import (
+    address_router,
     auth_router,
-    barber_application_router,
-    barber_router,
-    booking_router,
-    booking_ws_router,
-    public_booking_router,
-    telegram_router,
+    bouquet_router,
+    category_router,
+    order_router,
+    review_router,
+    shop_router,
+    upload_router,
     user_router,
 )
-from app.services.telegram_polling import telegram_polling_runner
 
-app = FastAPI(title="Barber Shop API", version="2.0.0")
-
-
+app = FastAPI(title="Flower Shop API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,24 +28,18 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(user_router)
-app.include_router(barber_router)
-app.include_router(barber_application_router)
-app.include_router(public_booking_router)
-app.include_router(booking_router)
-app.include_router(booking_ws_router)
-app.include_router(telegram_router)
+app.include_router(address_router)
+app.include_router(category_router)
+app.include_router(shop_router)
+app.include_router(bouquet_router)
+app.include_router(order_router)
+app.include_router(review_router)
+app.include_router(upload_router)
+
+if settings.AUTO_CREATE_TABLES:
+    Base.metadata.create_all(bind=engine)
 
 
 @app.get("/health", tags=["Health"])
 def healthcheck():
     return {"status": "ok"}
-
-
-@app.on_event("startup")
-async def start_telegram_polling():
-    await telegram_polling_runner.start()
-
-
-@app.on_event("shutdown")
-async def stop_telegram_polling():
-    await telegram_polling_runner.stop()

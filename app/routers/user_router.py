@@ -1,13 +1,22 @@
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.dependencies.auth import get_current_user
+from app.dependencies.roles import require_admin
 from app.models.user import User
-from app.schemas.user import ChangePasswordSchema, UserOut, UserUpdate
+from app.schemas.user import AdminUserUpdate, ChangePasswordSchema, UserOut, UserUpdate
 from app.services.user_service import UserService
 
 router = APIRouter(prefix="/users", tags=["Users"])
+
+
+@router.get("", response_model=list[UserOut])
+def list_users(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    return UserService(db).list_users()
 
 
 @router.get("/me", response_model=UserOut)
@@ -33,36 +42,11 @@ def change_my_password(
     return UserService(db).change_my_password(current_user, payload)
 
 
-@router.post("/me/avatar", response_model=UserOut)
-def upload_my_avatar(
-    image: UploadFile = File(...),
+@router.patch("/{user_id}", response_model=UserOut)
+def admin_update_user(
+    user_id: str,
+    payload: AdminUserUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ):
-    return UserService(db).update_avatar(current_user, image)
-
-
-@router.delete("/me/avatar", response_model=UserOut)
-def delete_my_avatar(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    return UserService(db).delete_avatar(current_user)
-
-
-@router.post("/me/gallery", response_model=UserOut)
-def upload_my_gallery_image(
-    image: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    return UserService(db).add_gallery_image(current_user, image)
-
-
-@router.delete("/me/gallery/{image_index}", response_model=UserOut)
-def delete_my_gallery_image(
-    image_index: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    return UserService(db).delete_gallery_image(current_user, image_index)
+    return UserService(db).admin_update_user(user_id, payload)

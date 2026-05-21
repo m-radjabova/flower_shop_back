@@ -13,10 +13,18 @@ def _get_env(name: str) -> str | None:
     return value.strip() if value is not None else None
 
 
+def _normalize_database_url(database_url: str) -> str:
+    if database_url.startswith("postgresql+psycopg2://"):
+        return database_url
+    if database_url.startswith("postgresql://"):
+        return database_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    return database_url
+
+
 def get_database_url() -> str:
     database_url = _get_env("DATABASE_URL")
     if database_url:
-        return database_url
+        return _normalize_database_url(database_url)
 
     required_env_vars = ["DB_USER", "DB_PASS", "DB_HOST", "DB_PORT", "DB_NAME"]
     env_values = {name: _get_env(name) for name in required_env_vars}
@@ -37,7 +45,11 @@ class Base(DeclarativeBase):
     pass
 
 
-engine = create_engine(get_database_url(), pool_pre_ping=True)
+engine = create_engine(
+    get_database_url(),
+    pool_pre_ping=True,
+    connect_args={"connect_timeout": 10},
+)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
 
 

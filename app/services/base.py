@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -36,6 +38,13 @@ class BaseService:
         return instance
 
     @staticmethod
+    def parse_uuid(value: str, label: str = "ID") -> UUID:
+        try:
+            return UUID(str(value))
+        except (TypeError, ValueError) as exc:
+            raise ServiceError(status.HTTP_400_BAD_REQUEST, f"{label} noto'g'ri") from exc
+
+    @staticmethod
     def _get_constraint_message(exc: IntegrityError) -> str:
         diag = getattr(getattr(exc, "orig", None), "diag", None)
         constraint_name = getattr(diag, "constraint_name", None)
@@ -44,7 +53,7 @@ class BaseService:
         if constraint_name == "users_email_key" or "users_email_key" in raw_message:
             return "Bu email allaqachon mavjud"
 
-        if constraint_name == "users_phone_number_key" or "users_phone_number_key" in raw_message:
+        if constraint_name == "users_phone_key" or "users_phone_key" in raw_message:
             return "Bu telefon raqami allaqachon ro'yxatdan o'tgan"
 
         return "Ma'lumotlar cheklovi buzildi"

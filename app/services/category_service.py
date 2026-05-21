@@ -1,0 +1,62 @@
+from sqlalchemy import func, select
+
+from app.models.category import Category
+from app.schemas.category import CategoryCreate, CategoryUpdate
+from app.services.base import BaseService
+from app.utils.formatters import slugify
+
+
+class CategoryService(BaseService):
+    def list_categories(self, active_only: bool) -> list[Category]:
+        statement = select(Category).order_by(Category.name.asc())
+        if active_only:
+            statement = statement.where(Category.is_active.is_(True))
+        return list(self.db.execute(statement).scalars().all())
+
+    def create_category(self, payload: CategoryCreate) -> Category:
+        slug = self._build_unique_slug(payload.slug or payload.name)
+        category = Category(
+            name=payload.name.strip(),
+            slug=slug,
+            image=payload.image,
+            is_active=payload.is_active,
+        )
+        self.db.add(category)
+        self.commit()
+        return self.refresh(category)
+
+    def update_category(self, category_id: str, payload: CategoryUpdate) -> Category:
+        category = self.get_category(category_id)
+        data = payload.model_dump(exclude_unset=True)
+        if "name" in data and data["name"] is not None:
+            category.name = data["name"].strip()
+        if "image" in data:
+            category.image = data["image"]
+        if "is_active" in data and data["is_active"] is not None:
+            category.is_active = data["is_active"]
+        if "slug" in data and data["slug"] is not None:
+            category.slug = self._build_unique_slug(data["slug"], exclude_id=category.id)
+        elif "name" in data and data["name"] is not None:
+            category.slug = self._build_unique_slug(category.name, exclude_id=category.id)
+
+        self.db.add(category)
+        self.commit()
+        return self.refresh(category)
+
+    def get_category(self, category_id: str) -> Category:
+        category = self.db.get(Category, self.parse_uuid(category_id, "Kategoriya ID"))
+        if not category:
+            raise self.not_found("Kategoriya")
+        return category
+
+    def _build_unique_slug(self, value: str, exclude_id=None) -> str:
+        base_slug = slugify(value.strip())
+        slug = base_slug
+        counter = 2
+        while True:
+            statement = select(Category).where(func.lower(Category.slug) == slug.lower())
+            existing = self.db.execute(statement).scalar_one_or_none()
+            if existing is None or existing.id == exclude_id:
+                return slug
+            slug = f"{base_slug}-{counter}"
+            counter += 1

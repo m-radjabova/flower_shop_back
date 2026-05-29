@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.dependencies.auth import get_current_user
+from app.dependencies.auth import get_current_user, get_current_user_optional
+from app.models.enums import UserRole
 from app.models.user import User
 from app.schemas.shop import ShopCreate, ShopOut, ShopUpdate
 from app.services.shop_service import ShopService
@@ -17,7 +18,11 @@ def list_shops(
     include_inactive: bool = False,
     owner_id: str | None = None,
     db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional),
 ):
+    if include_inactive and (current_user is None or not current_user.has_role(UserRole.ADMIN)):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied")
+
     return ShopService(db).list_shops(
         city=city,
         search=search,

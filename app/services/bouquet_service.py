@@ -185,9 +185,9 @@ class BouquetService(BaseService):
         shop = self.db.get(Shop, self.parse_uuid(shop_id, "Do'kon ID"))
         if not shop:
             raise self.not_found("Do'kon")
-        if current_user.role == UserRole.ADMIN:
+        if current_user.has_role(UserRole.ADMIN):
             return shop
-        if current_user.role != UserRole.OWNER or shop.owner_id != current_user.id:
+        if not current_user.has_role(UserRole.OWNER) or shop.owner_id != current_user.id:
             raise self.forbidden("Bu do'kon uchun ruxsat yo'q")
         return shop
 

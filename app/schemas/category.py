@@ -8,14 +8,14 @@ from app.schemas.common import ORMModel, TimestampedSchema
 class CategoryCreate(ORMModel):
     name: str = Field(min_length=2, max_length=100)
     slug: str | None = Field(default=None, min_length=2, max_length=120)
-    image: str | None = Field(default=None, max_length=500)
+    image: str = Field(min_length=5, max_length=500)
     is_active: bool = True
 
 
 class CategoryUpdate(ORMModel):
     name: str | None = Field(default=None, min_length=2, max_length=100)
     slug: str | None = Field(default=None, min_length=2, max_length=120)
-    image: str | None = Field(default=None, max_length=500)
+    image: str | None = Field(default=None, min_length=5, max_length=500)
     is_active: bool | None = None
 
 

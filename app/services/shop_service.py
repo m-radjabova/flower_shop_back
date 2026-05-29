@@ -51,7 +51,7 @@ class ShopService(BaseService):
         return shop
 
     def create_shop(self, current_user: User, payload: ShopCreate) -> Shop:
-        if current_user.role not in {UserRole.ADMIN, UserRole.OWNER}:
+        if not current_user.has_any_role(UserRole.ADMIN, UserRole.OWNER):
             raise self.forbidden("Faqat owner yoki admin do'kon yarata oladi")
 
         shop = Shop(
@@ -67,7 +67,7 @@ class ShopService(BaseService):
             latitude=payload.latitude,
             longitude=payload.longitude,
             working_hours=payload.working_hours,
-            status=payload.status if current_user.role == UserRole.ADMIN else ShopStatus.PENDING,
+            status=payload.status if current_user.has_role(UserRole.ADMIN) else ShopStatus.PENDING,
         )
         self.db.add(shop)
         self.commit()
@@ -90,7 +90,7 @@ class ShopService(BaseService):
         if "city" in data:
             shop.city = data["city"].strip() if data["city"] else None
         if "status" in data and data["status"] is not None:
-            if current_user.role != UserRole.ADMIN:
+            if not current_user.has_role(UserRole.ADMIN):
                 raise self.forbidden("Faqat admin statusni o'zgartira oladi")
             shop.status = data["status"]
 
@@ -106,7 +106,7 @@ class ShopService(BaseService):
         shop = self.db.get(Shop, self.parse_uuid(shop_id, "Do'kon ID"))
         if not shop:
             raise self.not_found("Do'kon")
-        if current_user.role == UserRole.ADMIN:
+        if current_user.has_role(UserRole.ADMIN):
             return shop
         if shop.owner_id != current_user.id:
             raise self.forbidden("Bu do'kon sizga tegishli emas")

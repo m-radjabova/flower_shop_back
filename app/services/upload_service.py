@@ -52,6 +52,24 @@ class UploadService(BaseService):
             thumbnail_url=data.get("thumbnailUrl"),
         )
 
+    async def delete_image(self, file_id: str, *, ignore_missing: bool = False) -> None:
+        if not file_id:
+            return
+        if not settings.IMAGEKIT_PRIVATE_KEY:
+            raise self.bad_request("ImageKit private key sozlanmagan")
+
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.delete(
+                f"https://api.imagekit.io/v1/files/{file_id}",
+                auth=(settings.IMAGEKIT_PRIVATE_KEY, ""),
+            )
+
+        if response.status_code == 404 and ignore_missing:
+            return
+
+        if response.status_code >= 400:
+            raise self.bad_request("ImageKit'dan rasmni o'chirib bo'lmadi")
+
     @staticmethod
     def _safe_filename(filename: str) -> str:
         name = filename.strip().replace(" ", "-").lower()

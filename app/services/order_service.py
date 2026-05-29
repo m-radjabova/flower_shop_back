@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
 from app.models.bouquet import Bouquet
@@ -10,6 +10,7 @@ from app.models.shop import Shop
 from app.models.user import User
 from app.schemas.order import OrderCreate, OrderStatusUpdate
 from app.services.base import BaseService
+from app.services.referral_service import REFERRAL_REWARD_AMOUNT
 from app.utils.formatters import normalize_phone_uz
 
 
@@ -18,6 +19,12 @@ class OrderService(BaseService):
         shop = self.db.get(Shop, payload.shop_id)
         if not shop:
             raise self.not_found("Do'kon")
+        is_first_customer_order = False
+        if current_user:
+            existing_order_count = self.db.execute(
+                select(func.count(Order.id)).where(Order.user_id == current_user.id)
+            ).scalar_one()
+            is_first_customer_order = existing_order_count == 0
 
         total_price = Decimal("0")
         items: list[OrderItem] = []
@@ -64,6 +71,21 @@ class OrderService(BaseService):
             items=items,
         )
         self.db.add(order)
+
+        if (
+            current_user
+            and current_user.referred_by_id
+            and not current_user.referral_reward_granted
+            and is_first_customer_order
+        ):
+            referrer = self.db.get(User, current_user.referred_by_id)
+            current_user.referral_reward_granted = True
+            current_user.referral_bonus_balance += REFERRAL_REWARD_AMOUNT
+            self.db.add(current_user)
+            if referrer:
+                referrer.referral_bonus_balance += REFERRAL_REWARD_AMOUNT
+                self.db.add(referrer)
+
         self.commit()
         return self._load_order(order.id)
 
@@ -80,7 +102,7 @@ class OrderService(BaseService):
         shop = self.db.get(Shop, self.parse_uuid(shop_id, "Do'kon ID"))
         if not shop:
             raise self.not_found("Do'kon")
-        if current_user.role != UserRole.ADMIN and shop.owner_id != current_user.id:
+        if not current_user.has_role(UserRole.ADMIN) and shop.owner_id != current_user.id:
             raise self.forbidden("Bu do'kon buyurtmalarini ko'ra olmaysiz")
 
         statement = (
@@ -109,7 +131,7 @@ class OrderService(BaseService):
 
         if allow_owner_admin:
             shop = self.db.get(Shop, order.shop_id)
-            if current_user.role == UserRole.ADMIN or (shop and shop.owner_id == current_user.id):
+            if current_user.has_role(UserRole.ADMIN) or (shop and shop.owner_id == current_user.id):
                 return order
 
         raise self.forbidden("Bu buyurtmaga ruxsat yo'q")
@@ -117,7 +139,7 @@ class OrderService(BaseService):
     def update_order_status(self, order_id: str, current_user: User, payload: OrderStatusUpdate) -> Order:
         order = self.get_order(order_id, current_user=current_user, allow_owner_admin=True)
         shop = self.db.get(Shop, order.shop_id)
-        if current_user.role != UserRole.ADMIN and shop and shop.owner_id != current_user.id:
+        if not current_user.has_role(UserRole.ADMIN) and shop and shop.owner_id != current_user.id:
             raise self.forbidden("Faqat shop owner yoki admin yangilay oladi")
 
         if payload.status is not None:

@@ -10,13 +10,17 @@ from app.routers import (
     bouquet_router,
     category_router,
     order_router,
+    referral_router,
     review_router,
     shop_router,
     upload_router,
     user_router,
 )
 
+
+
 app = FastAPI(title="Flower Shop API", version="1.0.0")
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -33,6 +37,7 @@ app.include_router(category_router)
 app.include_router(shop_router)
 app.include_router(bouquet_router)
 app.include_router(order_router)
+app.include_router(referral_router)
 app.include_router(review_router)
 app.include_router(upload_router)
 

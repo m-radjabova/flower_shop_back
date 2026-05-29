@@ -6,7 +6,7 @@ from app.models.enums import UserRole
 
 def require_roles(*allowed_roles: UserRole):
     def checker(user=Depends(get_current_user)):
-        if user.role not in allowed_roles:
+        if not user.has_any_role(*allowed_roles):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied")
         return user
 

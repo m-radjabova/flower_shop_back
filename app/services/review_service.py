@@ -76,7 +76,7 @@ class ReviewService(BaseService):
             raise self.not_found("Review")
 
         shop = self.db.get(Shop, review.shop_id)
-        if current_user.role != UserRole.ADMIN and shop and shop.owner_id != current_user.id:
+        if not current_user.has_role(UserRole.ADMIN) and shop and shop.owner_id != current_user.id:
             raise self.forbidden("Bu reviewni boshqara olmaysiz")
 
         if payload.is_approved is not None:

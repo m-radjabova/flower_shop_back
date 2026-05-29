@@ -21,6 +21,7 @@ class RegisterSchema(BaseModel):
     full_name: str
     email: str
     phone: str = Field(alias="phone_number", min_length=7, max_length=32)
+    referral_code: str | None = Field(default=None, min_length=4, max_length=32)
     password: str = Field(min_length=6, max_length=128)
     confirm_password: str = Field(min_length=6, max_length=128)
 
@@ -58,6 +59,14 @@ class RegisterSchema(BaseModel):
         if not normalized:
             raise ValueError("Telefon raqami bo'sh bo'lishi mumkin emas")
         return normalized
+
+    @field_validator("referral_code")
+    @classmethod
+    def validate_referral_code(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        normalized = value.strip().upper()
+        return normalized or None
 
     @model_validator(mode="after")
     def validate_passwords_match(self):

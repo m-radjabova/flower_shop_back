@@ -10,6 +10,7 @@ from app.core.security import hash_password, verify_password
 from app.models.enums import UserRole
 from app.models.user import User
 from app.schemas.auth import LoginSchema, RegisterSchema
+from app.services.referral_service import ReferralService
 from app.services.base import BaseService, ServiceError
 from app.utils.formatters import normalize_phone_uz
 
@@ -46,12 +47,19 @@ class AuthService(BaseService):
             if existing_phone is not None:
                 raise ServiceError(409, "Bu telefon raqami allaqachon ro'yxatdan o'tgan")
 
+        referral_service = ReferralService(self.db)
+        referrer = referral_service.get_referrer_by_code(payload.referral_code)
+        if payload.referral_code and referrer is None:
+            raise ServiceError(404, "Referral code topilmadi")
+
         user = User(
             full_name=payload.full_name.strip(),
             email=normalized_email,
             phone=normalized_phone,
+            referral_code=referral_service.generate_referral_code(),
             password_hash=hash_password(payload.password),
-            role=UserRole.CUSTOMER,
+            roles=[UserRole.CUSTOMER],
+            referred_by_id=referrer.id if referrer else None,
         )
         self.db.add(user)
         self.db.flush()
@@ -87,7 +95,7 @@ class AuthService(BaseService):
                 payload={
                     "sub": str(user.id),
                     "type": "access",
-                    "role": user.role.value,
+                    "roles": [role.value for role in user.roles],
                 },
                 expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
             ),
@@ -104,7 +112,7 @@ class AuthService(BaseService):
             payload={
                 "sub": str(user.id),
                 "type": "access",
-                "role": user.role.value,
+                "roles": [role.value for role in user.roles],
             },
             expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
         )

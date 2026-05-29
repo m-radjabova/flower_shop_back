@@ -36,7 +36,7 @@ def get_or_create_owner(db, payload: dict) -> User:
     if owner:
         owner.full_name = payload["full_name"]
         owner.phone = normalize_phone_uz(payload["phone"])
-        owner.role = UserRole.OWNER
+        owner.roles = list(dict.fromkeys([*(owner.roles or []), UserRole.OWNER, UserRole.CUSTOMER]))
         owner.is_active = True
         db.add(owner)
         db.commit()
@@ -48,7 +48,7 @@ def get_or_create_owner(db, payload: dict) -> User:
         email=payload["email"],
         phone=normalize_phone_uz(payload["phone"]),
         password_hash=hash_password(payload.get("password", "owner123")),
-        role=UserRole.OWNER,
+        roles=[UserRole.OWNER, UserRole.CUSTOMER],
         is_active=True,
     )
     db.add(owner)
@@ -63,7 +63,7 @@ def get_or_create_customer(db, payload: dict) -> User:
     if customer:
         customer.full_name = payload["full_name"]
         customer.phone = normalize_phone_uz(payload["phone"]) if payload.get("phone") else None
-        customer.role = UserRole.CUSTOMER
+        customer.roles = [UserRole.CUSTOMER]
         customer.is_active = True
         db.add(customer)
         db.commit()
@@ -75,7 +75,7 @@ def get_or_create_customer(db, payload: dict) -> User:
         email=payload["email"],
         phone=normalize_phone_uz(payload["phone"]) if payload.get("phone") else None,
         password_hash=hash_password(payload.get("password", "customer123")),
-        role=UserRole.CUSTOMER,
+        roles=[UserRole.CUSTOMER],
         is_active=True,
     )
     db.add(customer)

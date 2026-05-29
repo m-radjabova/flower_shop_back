@@ -20,6 +20,7 @@ def sql_enum(enum_cls: type[Enum], name: str) -> SAEnum:
 class UserRole(str, Enum):
     ADMIN = "admin"
     OWNER = "owner"
+    COURIER = "courier"
     CUSTOMER = "customer"
 
 

@@ -3,6 +3,7 @@ from app.routers.auth_router import router as auth_router
 from app.routers.bouquet_router import router as bouquet_router
 from app.routers.category_router import router as category_router
 from app.routers.order_router import router as order_router
+from app.routers.referral_router import router as referral_router
 from app.routers.review_router import router as review_router
 from app.routers.shop_router import router as shop_router
 from app.routers.upload_router import router as upload_router

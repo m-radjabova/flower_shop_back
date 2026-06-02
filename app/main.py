@@ -11,13 +11,13 @@ from app.routers import (
     category_router,
     order_router,
     referral_router,
+    realtime_router,
     review_router,
     shop_router,
+    shop_application_router,
     upload_router,
     user_router,
 )
-
-
 
 app = FastAPI(title="Flower Shop API", version="1.0.0")
 
@@ -35,11 +35,13 @@ app.include_router(user_router)
 app.include_router(address_router)
 app.include_router(category_router)
 app.include_router(shop_router)
+app.include_router(shop_application_router)
 app.include_router(bouquet_router)
 app.include_router(order_router)
 app.include_router(referral_router)
 app.include_router(review_router)
 app.include_router(upload_router)
+app.include_router(realtime_router)
 
 if settings.AUTO_CREATE_TABLES:
     Base.metadata.create_all(bind=engine)

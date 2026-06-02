@@ -30,6 +30,8 @@ class Bouquet(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     image: Mapped[str] = mapped_column(String(500), nullable=False)
     images: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     size: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    size_options: Mapped[list[dict]] = mapped_column(JSON, nullable=False, default=list)
+    addon_options: Mapped[list[dict]] = mapped_column(JSON, nullable=False, default=list)
     stock: Mapped[int] = mapped_column(nullable=False, default=0, server_default="0")
     status: Mapped[BouquetStatus] = mapped_column(
         sql_enum(BouquetStatus, "bouquet_status"),

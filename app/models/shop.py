@@ -23,6 +23,8 @@ class Shop(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     city: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
     latitude: Mapped[str | None] = mapped_column(String(32), nullable=True)
     longitude: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    instagram: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    telegram: Mapped[str | None] = mapped_column(String(255), nullable=True)
     working_hours: Mapped[str | None] = mapped_column(String(255), nullable=True)
     rating: Mapped[Decimal] = mapped_column(Numeric(2, 1), nullable=False, default=Decimal("0.0"), server_default="0")
     reviews_count: Mapped[int] = mapped_column(nullable=False, default=0, server_default="0")

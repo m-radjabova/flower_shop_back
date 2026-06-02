@@ -18,6 +18,8 @@ class ShopCreate(ORMModel):
     city: str | None = Field(default=None, max_length=80)
     latitude: str | None = Field(default=None, max_length=32)
     longitude: str | None = Field(default=None, max_length=32)
+    instagram: str | None = Field(default=None, max_length=255)
+    telegram: str | None = Field(default=None, max_length=255)
     working_hours: str | None = Field(default=None, max_length=255)
     status: ShopStatus = ShopStatus.PENDING
 
@@ -33,6 +35,8 @@ class ShopUpdate(ORMModel):
     city: str | None = Field(default=None, max_length=80)
     latitude: str | None = Field(default=None, max_length=32)
     longitude: str | None = Field(default=None, max_length=32)
+    instagram: str | None = Field(default=None, max_length=255)
+    telegram: str | None = Field(default=None, max_length=255)
     working_hours: str | None = Field(default=None, max_length=255)
     status: ShopStatus | None = None
 
@@ -56,6 +60,8 @@ class ShopOut(TimestampedSchema):
     city: str | None = None
     latitude: str | None = None
     longitude: str | None = None
+    instagram: str | None = None
+    telegram: str | None = None
     working_hours: str | None = None
     rating: Decimal
     reviews_count: int
@@ -69,6 +75,8 @@ class ShopSummary(ORMModel):
     slug: str
     logo: str | None = None
     city: str | None = None
+    instagram: str | None = None
+    telegram: str | None = None
     rating: Decimal
     reviews_count: int
     status: ShopStatus

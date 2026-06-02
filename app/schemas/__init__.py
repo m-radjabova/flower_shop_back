@@ -4,6 +4,13 @@ from app.schemas.category import CategoryCreate, CategoryOut, CategoryUpdate
 from app.schemas.order import OrderCreate, OrderOut, OrderStatusUpdate
 from app.schemas.referral import ReferralSummaryOut
 from app.schemas.review import ReviewCreate, ReviewModerationUpdate, ReviewOut
+from app.schemas.shop_application import (
+    ShopApplicationCreate,
+    ShopApplicationOut,
+    ShopApplicationReview,
+    ShopApplicationStatusOut,
+    ShopApplicationSubmitResponse,
+)
 from app.schemas.shop import ShopCreate, ShopOut, ShopUpdate
 from app.schemas.user import AdminUserUpdate, ChangePasswordSchema, UserOut, UserUpdate
 
@@ -26,6 +33,11 @@ __all__ = [
     "ReviewCreate",
     "ReviewModerationUpdate",
     "ReviewOut",
+    "ShopApplicationCreate",
+    "ShopApplicationOut",
+    "ShopApplicationReview",
+    "ShopApplicationStatusOut",
+    "ShopApplicationSubmitResponse",
     "ShopCreate",
     "ShopOut",
     "ShopUpdate",

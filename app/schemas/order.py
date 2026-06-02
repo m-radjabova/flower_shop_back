@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import Field
 
 from app.models.enums import OrderStatus, PaymentStatus
+from app.schemas.bouquet import BouquetAddonOption, BouquetSizeOption
 from app.schemas.common import ORMModel, TimestampedSchema
 
 
@@ -11,6 +12,8 @@ class OrderItemCreate(ORMModel):
     bouquet_id: UUID | None = None
     bouquet_name: str = Field(min_length=2, max_length=150)
     bouquet_image: str | None = Field(default=None, max_length=500)
+    selected_size: BouquetSizeOption | None = None
+    selected_addons: list[BouquetAddonOption] = Field(default_factory=list, max_length=3)
     price: Decimal = Field(ge=0)
     quantity: int = Field(gt=0)
 
@@ -38,6 +41,8 @@ class OrderItemOut(ORMModel):
     bouquet_id: UUID | None = None
     bouquet_name: str
     bouquet_image: str | None = None
+    selected_size: BouquetSizeOption | None = None
+    selected_addons: list[BouquetAddonOption] = Field(default_factory=list)
     price: Decimal
     quantity: int
     total_price: Decimal

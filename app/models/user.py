@@ -1,8 +1,7 @@
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import Boolean, ForeignKey, Numeric, String, text
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy import Boolean, ForeignKey, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -23,11 +22,11 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     referral_reward_granted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     referral_bonus_balance: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=0, server_default="0")
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    roles: Mapped[list[UserRole]] = mapped_column(
-        ARRAY(sql_enum(UserRole, "user_role")),
+    role: Mapped[UserRole] = mapped_column(
+        sql_enum(UserRole, "user_role"),
         nullable=False,
-        default=lambda: [UserRole.CUSTOMER],
-        server_default=text("ARRAY['customer']::user_role[]"),
+        default=UserRole.CUSTOMER,
+        server_default=UserRole.CUSTOMER.value,
     )
     refresh_token_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
@@ -36,11 +35,12 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     orders = relationship("Order", back_populates="user")
     reviews = relationship("Review", back_populates="user")
     addresses = relationship("Address", back_populates="user", cascade="all, delete-orphan")
+    shop_applications = relationship("ShopApplication", back_populates="user", cascade="all, delete-orphan")
     referred_by = relationship("User", remote_side="User.id", back_populates="referred_users")
     referred_users = relationship("User", back_populates="referred_by")
 
     def has_role(self, role: UserRole) -> bool:
-        return role in (self.roles or [])
+        return self.role == role
 
     def has_any_role(self, *roles: UserRole) -> bool:
-        return any(role in (self.roles or []) for role in roles)
+        return self.role in roles

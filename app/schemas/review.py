@@ -24,6 +24,12 @@ class ReviewUserSummary(ORMModel):
     full_name: str
 
 
+class ReviewBouquetSummary(ORMModel):
+    id: UUID
+    name: str
+    image: str
+
+
 class ReviewOut(TimestampedSchema):
     user_id: UUID
     shop_id: UUID
@@ -35,3 +41,4 @@ class ReviewOut(TimestampedSchema):
     is_approved: bool
     is_verified: bool
     user: ReviewUserSummary
+    bouquet: ReviewBouquetSummary | None = None

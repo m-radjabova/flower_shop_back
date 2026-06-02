@@ -58,7 +58,7 @@ class AuthService(BaseService):
             phone=normalized_phone,
             referral_code=referral_service.generate_referral_code(),
             password_hash=hash_password(payload.password),
-            roles=[UserRole.CUSTOMER],
+            role=UserRole.CUSTOMER,
             referred_by_id=referrer.id if referrer else None,
         )
         self.db.add(user)
@@ -95,7 +95,7 @@ class AuthService(BaseService):
                 payload={
                     "sub": str(user.id),
                     "type": "access",
-                    "roles": [role.value for role in user.roles],
+                    "role": user.role.value,
                 },
                 expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
             ),
@@ -112,7 +112,7 @@ class AuthService(BaseService):
             payload={
                 "sub": str(user.id),
                 "type": "access",
-                "roles": [role.value for role in user.roles],
+                "role": user.role.value,
             },
             expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
         )

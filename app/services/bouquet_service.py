@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import selectinload
 
@@ -12,6 +14,13 @@ from app.utils.formatters import slugify
 
 
 class BouquetService(BaseService):
+    SIZE_LABELS = {
+        "small": "Small",
+        "medium": "Medium",
+        "large": "Large",
+        "premium": "Premium",
+    }
+
     def list_bouquets(
         self,
         shop_id: str | None = None,
@@ -68,6 +77,16 @@ class BouquetService(BaseService):
             "has_more": offset + len(items) < total,
         }
 
+    def list_managed_bouquets(self, shop_id: str, current_user: User) -> list[Bouquet]:
+        shop = self._get_managed_shop(shop_id, current_user)
+        statement = (
+            select(Bouquet)
+            .options(selectinload(Bouquet.shop), selectinload(Bouquet.category))
+            .where(Bouquet.shop_id == shop.id)
+            .order_by(Bouquet.created_at.desc())
+        )
+        return list(self.db.execute(statement).scalars().all())
+
     def _filtered_bouquet_statement(
         self,
         shop_id: str | None = None,
@@ -113,6 +132,15 @@ class BouquetService(BaseService):
         shop = self._get_managed_shop(payload.shop_id, current_user)
         if payload.category_id:
             self._ensure_category_exists(payload.category_id)
+        size_options = self._normalize_size_options(payload.size_options, fallback_price=payload.price)
+        addon_options = self._normalize_addon_options(payload.addon_options)
+        primary_price, primary_image, normalized_images, size_summary = self._resolve_primary_bouquet_fields(
+            size_options=size_options,
+            fallback_price=payload.price,
+            fallback_image=payload.image,
+            fallback_images=payload.images,
+            fallback_size=payload.size,
+        )
 
         bouquet = Bouquet(
             shop_id=shop.id,
@@ -121,11 +149,13 @@ class BouquetService(BaseService):
             slug=self._build_unique_slug(shop.id, payload.slug or payload.name),
             description=payload.description,
             compound=payload.compound,
-            price=payload.price,
+            price=primary_price,
             old_price=payload.old_price,
-            image=payload.image or payload.images[0],
-            images=self._normalize_images(payload.image, payload.images),
-            size=payload.size,
+            image=primary_image,
+            images=normalized_images,
+            size=size_summary,
+            size_options=size_options,
+            addon_options=addon_options,
             stock=payload.stock,
             status=payload.status,
         )
@@ -148,31 +178,59 @@ class BouquetService(BaseService):
                 bouquet.slug = self._build_unique_slug(bouquet.shop_id, bouquet.name, exclude_id=bouquet.id)
         if "slug" in data and data["slug"] is not None:
             bouquet.slug = self._build_unique_slug(bouquet.shop_id, data["slug"], exclude_id=bouquet.id)
-
-        if "images" in data and data["images"] is not None:
-            bouquet.images = self._normalize_images(data.get("image") or bouquet.image, data["images"])
-            if "image" not in data and bouquet.images:
-                bouquet.image = bouquet.images[0]
-        elif "image" in data and data["image"] is not None:
-            bouquet.images = self._normalize_images(data["image"], bouquet.images)
+        size_options_payload = data.get("size_options")
+        addon_options_payload = data.get("addon_options")
+        next_size_options = (
+            self._normalize_size_options(size_options_payload, fallback_price=data.get("price") or bouquet.price)
+            if size_options_payload is not None
+            else list(bouquet.size_options or [])
+        )
+        next_addon_options = (
+            self._normalize_addon_options(addon_options_payload)
+            if addon_options_payload is not None
+            else list(bouquet.addon_options or [])
+        )
+        fallback_images = data["images"] if "images" in data and data["images"] is not None else bouquet.images
+        fallback_image = data.get("image") if data.get("image") else bouquet.image
+        fallback_price = data.get("price") if data.get("price") is not None else bouquet.price
+        fallback_size = data.get("size") if "size" in data else bouquet.size
+        primary_price, primary_image, normalized_images, size_summary = self._resolve_primary_bouquet_fields(
+            size_options=next_size_options,
+            fallback_price=fallback_price,
+            fallback_image=fallback_image,
+            fallback_images=fallback_images,
+            fallback_size=fallback_size,
+        )
 
         for field in (
             "category_id",
             "description",
             "compound",
-            "price",
             "old_price",
-            "image",
-            "size",
             "stock",
             "status",
         ):
             if field in data:
                 setattr(bouquet, field, data[field])
 
+        bouquet.price = primary_price
+        bouquet.image = primary_image
+        bouquet.images = normalized_images
+        bouquet.size = size_summary
+        bouquet.size_options = next_size_options
+        bouquet.addon_options = next_addon_options
+
         self.db.add(bouquet)
         self.commit()
         return self.get_bouquet(str(bouquet.id), include_hidden=True)
+
+    def delete_bouquet(self, bouquet_id: str, current_user: User) -> None:
+        bouquet = self.db.get(Bouquet, self.parse_uuid(bouquet_id, "Buket ID"))
+        if not bouquet:
+            raise self.not_found("Buket")
+        self._get_managed_shop(str(bouquet.shop_id), current_user)
+        self.db.delete(bouquet)
+        self.commit()
 
     def _normalize_images(self, cover_image: str | None, images: list[str] | None) -> list[str]:
         normalized: list[str] = []
@@ -180,6 +238,69 @@ class BouquetService(BaseService):
             if image and image not in normalized:
                 normalized.append(image)
         return normalized
+
+    def _normalize_size_options(self, size_options, fallback_price) -> list[dict]:
+        normalized: list[dict] = []
+        for option in size_options or []:
+            item = option.model_dump() if hasattr(option, "model_dump") else dict(option)
+            item["label"] = (item.get("label") or self.SIZE_LABELS.get(item["key"], item["key"])).strip()
+            item["image"] = item["image"].strip()
+            if not item["image"]:
+                raise self.bad_request("Har bir size uchun rasm kerak")
+            item["price"] = self._json_decimal(item["price"])
+            normalized.append(item)
+        if normalized:
+            order_map = {key: index for index, key in enumerate(self.SIZE_LABELS)}
+            normalized.sort(key=lambda item: order_map.get(item["key"], 999))
+            return normalized
+        return []
+
+    def _normalize_addon_options(self, addon_options) -> list[dict]:
+        normalized: list[dict] = []
+        for index, option in enumerate(addon_options or []):
+            item = option.model_dump() if hasattr(option, "model_dump") else dict(option)
+            item_id = (item.get("id") or f"addon_{index + 1}").strip().lower().replace(" ", "_")
+            item_name = item["name"].strip()
+            item_image = item["image"].strip()
+            if not item_name:
+                raise self.bad_request("Add-on nomi bo'sh bo'lmasligi kerak")
+            if not item_image:
+                raise self.bad_request("Har bir add-on uchun rasm kerak")
+            normalized.append(
+                {
+                    "id": item_id,
+                    "name": item_name,
+                    "price": self._json_decimal(item["price"]),
+                    "image": item_image,
+                }
+            )
+        return normalized
+
+    def _resolve_primary_bouquet_fields(
+        self,
+        *,
+        size_options: list[dict],
+        fallback_price,
+        fallback_image: str | None,
+        fallback_images: list[str] | None,
+        fallback_size: str | None,
+    ):
+        if size_options:
+            primary = next((item for item in size_options if item["key"] == "medium"), size_options[0])
+            normalized_images = self._normalize_images(
+                primary["image"],
+                [item["image"] for item in size_options] + list(fallback_images or []),
+            )
+            size_summary = ", ".join(item["label"] for item in size_options)
+            return primary["price"], primary["image"], normalized_images, size_summary
+
+        normalized_images = self._normalize_images(fallback_image, fallback_images)
+        if not normalized_images:
+            raise self.bad_request("Kamida bitta rasm kerak")
+        return fallback_price, normalized_images[0], normalized_images, fallback_size
+
+    def _json_decimal(self, value) -> str:
+        return format(Decimal(str(value)), "f")
 
     def _get_managed_shop(self, shop_id: str, current_user: User) -> Shop:
         shop = self.db.get(Shop, self.parse_uuid(shop_id, "Do'kon ID"))

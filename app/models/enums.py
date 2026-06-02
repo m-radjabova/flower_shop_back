@@ -17,6 +17,7 @@ def sql_enum(enum_cls: type[Enum], name: str) -> SAEnum:
     )
 
 
+
 class UserRole(str, Enum):
     ADMIN = "admin"
     OWNER = "owner"
@@ -28,6 +29,12 @@ class ShopStatus(str, Enum):
     PENDING = "pending"
     ACTIVE = "active"
     BLOCKED = "blocked"
+
+
+class ShopApplicationStatus(str, Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
 
 
 class BouquetStatus(str, Enum):

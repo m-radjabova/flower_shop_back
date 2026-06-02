@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends
+
+from app.core.realtime import broadcast_order_event
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -11,12 +13,14 @@ router = APIRouter(prefix="/orders", tags=["Orders"])
 
 
 @router.post("", response_model=OrderOut)
-def create_order(
+async def create_order(
     payload: OrderCreate,
     current_user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
-    return OrderService(db).create_order(payload, current_user)
+    order = OrderService(db).create_order(payload, current_user)
+    await broadcast_order_event(order, 'order.created')
+    return order
 
 
 @router.get("/me", response_model=list[OrderOut])
@@ -43,10 +47,12 @@ def get_order(
 
 
 @router.patch("/{order_id}/status", response_model=OrderOut)
-def update_order_status(
+async def update_order_status(
     order_id: str,
     payload: OrderStatusUpdate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return OrderService(db).update_order_status(order_id, current_user, payload)
+    order = OrderService(db).update_order_status(order_id, current_user, payload)
+    await broadcast_order_event(order, 'order.updated')
+    return order

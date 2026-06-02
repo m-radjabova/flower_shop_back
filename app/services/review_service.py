@@ -26,7 +26,7 @@ class ReviewService(BaseService):
     def list_reviews(self, shop_id: str | None = None, bouquet_id: str | None = None) -> list[Review]:
         statement = (
             select(Review)
-            .options(selectinload(Review.user))
+            .options(selectinload(Review.user), selectinload(Review.bouquet))
             .where(Review.is_approved.is_(True))
             .order_by(Review.created_at.desc())
         )
@@ -34,6 +34,21 @@ class ReviewService(BaseService):
             statement = statement.where(Review.shop_id == self.parse_uuid(shop_id, "Do'kon ID"))
         if bouquet_id:
             statement = statement.where(Review.bouquet_id == self.parse_uuid(bouquet_id, "Buket ID"))
+        return list(self.db.execute(statement).scalars().all())
+
+    def list_managed_reviews(self, shop_id: str, current_user: User) -> list[Review]:
+        shop = self.db.get(Shop, self.parse_uuid(shop_id, "Do'kon ID"))
+        if not shop:
+            raise self.not_found("Do'kon")
+        if not current_user.has_role(UserRole.ADMIN) and shop.owner_id != current_user.id:
+            raise self.forbidden("Bu reviewlarni ko'ra olmaysiz")
+
+        statement = (
+            select(Review)
+            .options(selectinload(Review.user), selectinload(Review.bouquet))
+            .where(Review.shop_id == shop.id)
+            .order_by(Review.created_at.desc())
+        )
         return list(self.db.execute(statement).scalars().all())
 
     def create_review(self, current_user: User, payload: ReviewCreate) -> Review:
@@ -63,6 +78,7 @@ class ReviewService(BaseService):
             rating=payload.rating,
             text=payload.text,
             image=payload.image,
+            is_approved=False,
             is_verified=order is not None,
         )
         self.db.add(review)

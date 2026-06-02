@@ -27,6 +27,15 @@ def list_my_reviews(
     return ReviewService(db).list_my_reviews(str(current_user.id))
 
 
+@router.get("/manage/shop/{shop_id}", response_model=list[ReviewOut])
+def list_managed_reviews(
+    shop_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return ReviewService(db).list_managed_reviews(shop_id, current_user)
+
+
 @router.post("", response_model=ReviewOut)
 def create_review(
     payload: ReviewCreate,

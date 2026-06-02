@@ -20,3 +20,25 @@ def slugify(value: str) -> str:
     if not slug:
         raise ServiceError(400, "Slug yaratib bo'lmadi")
     return slug
+
+
+def normalize_instagram(value: str | None) -> str | None:
+    if value is None:
+        return None
+    trimmed = value.strip()
+    if not trimmed:
+        return None
+    if trimmed.startswith(("http://", "https://")):
+        return trimmed
+    return f"@{trimmed.lstrip('@')}"
+
+
+def normalize_telegram(value: str | None) -> str | None:
+    if value is None:
+        return None
+    trimmed = value.strip()
+    if not trimmed:
+        return None
+    if trimmed.startswith(("http://", "https://")):
+        return trimmed
+    return f"@{trimmed.lstrip('@')}"

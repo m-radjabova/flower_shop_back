@@ -1,7 +1,7 @@
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import ForeignKey, Numeric, String, Text
+from sqlalchemy import ForeignKey, JSON, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -52,6 +52,8 @@ class OrderItem(UUIDPrimaryKeyMixin, Base):
     )
     bouquet_name: Mapped[str] = mapped_column(String(150), nullable=False)
     bouquet_image: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    selected_size: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    selected_addons: Mapped[list[dict]] = mapped_column(JSON, nullable=False, default=list)
     price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     quantity: Mapped[int] = mapped_column(nullable=False)
     total_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)

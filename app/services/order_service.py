@@ -37,14 +37,49 @@ class OrderService(BaseService):
             if bouquet and bouquet.stock < item.quantity:
                 raise self.bad_request(f"{bouquet.name} uchun omborda yetarli qoldiq yo'q")
 
-            unit_price = bouquet.price if bouquet else item.price
+            selected_size = self._json_size_option(item.selected_size.model_dump()) if item.selected_size else None
+            selected_addons = [self._json_addon_option(addon.model_dump()) for addon in item.selected_addons]
+            unit_price = Decimal(str(item.price))
+            bouquet_image = item.bouquet_image
+            bouquet_name = item.bouquet_name.strip()
+
+            if bouquet:
+                bouquet_name = bouquet.name
+                bouquet_image = bouquet.image
+                if selected_size:
+                    matched_size = next(
+                        (option for option in (bouquet.size_options or []) if option.get("key") == selected_size["key"]),
+                        None,
+                    )
+                    if not matched_size:
+                        raise self.bad_request("Tanlangan bouquet size topilmadi")
+                    selected_size = self._json_size_option(matched_size)
+                    bouquet_image = matched_size.get("image") or bouquet.image
+                    unit_price = Decimal(str(matched_size["price"]))
+                else:
+                    unit_price = bouquet.price
+
+                if selected_addons:
+                    bouquet_addons = {option.get("id"): option for option in (bouquet.addon_options or [])}
+                    normalized_addons: list[dict] = []
+                    for addon in selected_addons:
+                        matched_addon = bouquet_addons.get(addon["id"])
+                        if not matched_addon:
+                            raise self.bad_request("Tanlangan add-on topilmadi")
+                        normalized_addons.append(self._json_addon_option(matched_addon))
+                    selected_addons = normalized_addons
+
+                unit_price += sum(Decimal(str(addon["price"])) for addon in selected_addons)
+
             item_total = unit_price * item.quantity
             total_price += item_total
             items.append(
                 OrderItem(
                     bouquet_id=bouquet.id if bouquet else item.bouquet_id,
-                    bouquet_name=bouquet.name if bouquet else item.bouquet_name.strip(),
-                    bouquet_image=bouquet.image if bouquet else item.bouquet_image,
+                    bouquet_name=bouquet_name,
+                    bouquet_image=bouquet_image,
+                    selected_size=selected_size,
+                    selected_addons=selected_addons,
                     price=unit_price,
                     quantity=item.quantity,
                     total_price=item_total,
@@ -88,6 +123,18 @@ class OrderService(BaseService):
 
         self.commit()
         return self._load_order(order.id)
+
+    def _json_size_option(self, option: dict) -> dict:
+        return {
+            **option,
+            "price": format(Decimal(str(option["price"])), "f"),
+        }
+
+    def _json_addon_option(self, option: dict) -> dict:
+        return {
+            **option,
+            "price": format(Decimal(str(option["price"])), "f"),
+        }
 
     def list_customer_orders(self, current_user: User) -> list[Order]:
         statement = (

@@ -6,7 +6,7 @@ from app.models.shop import Shop
 from app.models.user import User
 from app.schemas.shop import ShopCreate, ShopUpdate
 from app.services.base import BaseService
-from app.utils.formatters import normalize_phone_uz, slugify
+from app.utils.formatters import normalize_instagram, normalize_phone_uz, normalize_telegram, slugify
 
 
 class ShopService(BaseService):
@@ -66,6 +66,8 @@ class ShopService(BaseService):
             city=payload.city.strip() if payload.city else None,
             latitude=payload.latitude,
             longitude=payload.longitude,
+            instagram=normalize_instagram(payload.instagram),
+            telegram=normalize_telegram(payload.telegram),
             working_hours=payload.working_hours,
             status=payload.status if current_user.has_role(UserRole.ADMIN) else ShopStatus.PENDING,
         )
@@ -89,6 +91,10 @@ class ShopService(BaseService):
             shop.address = data["address"].strip()
         if "city" in data:
             shop.city = data["city"].strip() if data["city"] else None
+        if "instagram" in data:
+            shop.instagram = normalize_instagram(data["instagram"])
+        if "telegram" in data:
+            shop.telegram = normalize_telegram(data["telegram"])
         if "status" in data and data["status"] is not None:
             if not current_user.has_role(UserRole.ADMIN):
                 raise self.forbidden("Faqat admin statusni o'zgartira oladi")

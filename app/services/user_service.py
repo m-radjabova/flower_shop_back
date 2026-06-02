@@ -37,7 +37,7 @@ class UserService(BaseService):
             full_name=full_name,
             email=email,
             password=password,
-            roles=[UserRole.ADMIN, UserRole.CUSTOMER],
+            role=UserRole.ADMIN,
         )
 
     def list_users(self, limit: int = 15, offset: int = 0, search: str | None = None) -> dict:
@@ -80,9 +80,6 @@ class UserService(BaseService):
             self._ensure_phone_number_available(data["phone"], exclude_user_id=current_user.id)
         if "full_name" in data and data["full_name"] is not None:
             data["full_name"] = data["full_name"].strip()
-        if "roles" in data and data["roles"] is not None:
-            data["roles"] = list(dict.fromkeys(data["roles"]))
-
         for field, value in data.items():
             setattr(current_user, field, value)
 
@@ -149,7 +146,7 @@ class UserService(BaseService):
         self.commit()
         return self.refresh(user)
 
-    def _create_user(self, full_name: str, email: str, password: str, roles: list[UserRole]) -> User:
+    def _create_user(self, full_name: str, email: str, password: str, role: UserRole) -> User:
         normalized_email = email.strip().lower()
         self._ensure_email_available(normalized_email)
 
@@ -157,7 +154,7 @@ class UserService(BaseService):
             full_name=full_name.strip(),
             email=normalized_email,
             password_hash=hash_password(password),
-            roles=list(dict.fromkeys(roles)) or [UserRole.CUSTOMER],
+            role=role,
         )
         self.db.add(user)
         self.commit()

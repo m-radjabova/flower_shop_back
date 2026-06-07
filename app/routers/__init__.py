@@ -2,6 +2,7 @@ from app.routers.address_router import router as address_router
 from app.routers.auth_router import router as auth_router
 from app.routers.bouquet_router import router as bouquet_router
 from app.routers.category_router import router as category_router
+from app.routers.important_date_router import router as important_date_router
 from app.routers.order_router import router as order_router
 from app.routers.referral_router import router as referral_router
 from app.routers.realtime_router import router as realtime_router

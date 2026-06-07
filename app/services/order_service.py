@@ -102,6 +102,7 @@ class OrderService(BaseService):
             address=payload.address.strip() if payload.address else None,
             payment_method=payload.payment_method.strip(),
             note=payload.note,
+            gift_message=payload.gift_message.strip() if payload.gift_message else None,
             total_price=total_price,
             items=items,
         )

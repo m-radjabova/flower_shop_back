@@ -1,4 +1,6 @@
+from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID
 
 from pydantic import Field
@@ -38,6 +40,9 @@ class ShopUpdate(ORMModel):
     instagram: str | None = Field(default=None, max_length=255)
     telegram: str | None = Field(default=None, max_length=255)
     working_hours: str | None = Field(default=None, max_length=255)
+    is_verified: bool | None = None
+    is_premium: bool | None = None
+    premium_until: datetime | None = None
     status: ShopStatus | None = None
 
 
@@ -65,6 +70,11 @@ class ShopOut(TimestampedSchema):
     working_hours: str | None = None
     rating: Decimal
     reviews_count: int
+    completed_orders_count: int = 0
+    is_verified: bool
+    is_premium: bool = False
+    premium_until: datetime | None = None
+    popularity_badge: Literal["best_seller", "most_popular"] | None = None
     status: ShopStatus
     owner: ShopOwnerSummary
 
@@ -79,4 +89,9 @@ class ShopSummary(ORMModel):
     telegram: str | None = None
     rating: Decimal
     reviews_count: int
+    completed_orders_count: int = 0
+    is_verified: bool
+    is_premium: bool = False
+    premium_until: datetime | None = None
+    popularity_badge: Literal["best_seller", "most_popular"] | None = None
     status: ShopStatus

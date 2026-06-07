@@ -9,6 +9,7 @@ from app.routers import (
     auth_router,
     bouquet_router,
     category_router,
+    important_date_router,
     order_router,
     referral_router,
     realtime_router,
@@ -21,7 +22,6 @@ from app.routers import (
 
 app = FastAPI(title="Flower Shop API", version="1.0.0")
 
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -32,6 +32,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(user_router)
+app.include_router(important_date_router)
 app.include_router(address_router)
 app.include_router(category_router)
 app.include_router(shop_router)

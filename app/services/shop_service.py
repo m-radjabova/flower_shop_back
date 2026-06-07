@@ -1,7 +1,11 @@
+from datetime import datetime, timezone
+from decimal import Decimal
+
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import selectinload
 
-from app.models.enums import ShopStatus, UserRole
+from app.models.enums import OrderStatus, ShopStatus, UserRole
+from app.models.order import Order
 from app.models.shop import Shop
 from app.models.user import User
 from app.schemas.shop import ShopCreate, ShopUpdate
@@ -35,7 +39,9 @@ class ShopService(BaseService):
         if owner_id:
             statement = statement.where(Shop.owner_id == self.parse_uuid(owner_id, "Owner ID"))
 
-        return list(self.db.execute(statement).scalars().all())
+        shops = list(self.db.execute(statement).scalars().all())
+        self._attach_shop_metadata(shops)
+        return self._sort_shops(shops)
 
     def get_shop_by_slug(self, slug: str, include_hidden: bool = False) -> Shop:
         statement = (
@@ -48,6 +54,7 @@ class ShopService(BaseService):
             raise self.not_found("Do'kon")
         if not include_hidden and shop.status != ShopStatus.ACTIVE:
             raise self.not_found("Do'kon")
+        self._attach_shop_metadata([shop])
         return shop
 
     def create_shop(self, current_user: User, payload: ShopCreate) -> Shop:
@@ -95,6 +102,18 @@ class ShopService(BaseService):
             shop.instagram = normalize_instagram(data["instagram"])
         if "telegram" in data:
             shop.telegram = normalize_telegram(data["telegram"])
+        if "is_verified" in data and data["is_verified"] is not None:
+            if not current_user.has_role(UserRole.ADMIN):
+                raise self.forbidden("Faqat admin verified belgini o'zgartira oladi")
+            shop.is_verified = data["is_verified"]
+        if "is_premium" in data:
+            if not current_user.has_role(UserRole.ADMIN):
+                raise self.forbidden("Faqat admin premium holatini o'zgartira oladi")
+            shop.is_premium = bool(data["is_premium"])
+        if "premium_until" in data:
+            if not current_user.has_role(UserRole.ADMIN):
+                raise self.forbidden("Faqat admin premium muddatini o'zgartira oladi")
+            shop.premium_until = data["premium_until"]
         if "status" in data and data["status"] is not None:
             if not current_user.has_role(UserRole.ADMIN):
                 raise self.forbidden("Faqat admin statusni o'zgartira oladi")
@@ -120,7 +139,9 @@ class ShopService(BaseService):
 
     def _get_shop_for_response(self, shop_id) -> Shop:
         statement = select(Shop).options(selectinload(Shop.owner)).where(Shop.id == shop_id)
-        return self.db.execute(statement).scalar_one()
+        shop = self.db.execute(statement).scalar_one()
+        self._attach_shop_metadata([shop])
+        return shop
 
     def _build_unique_slug(self, value: str, exclude_id=None) -> str:
         base_slug = slugify(value.strip())
@@ -133,3 +154,64 @@ class ShopService(BaseService):
                 return slug
             slug = f"{base_slug}-{counter}"
             counter += 1
+
+    def _attach_shop_metadata(self, shops: list[Shop]) -> None:
+        if not shops:
+            return
+
+        shop_ids = [shop.id for shop in shops]
+        delivered_orders_statement = (
+            select(Order.shop_id, func.count(Order.id))
+            .where(
+                Order.shop_id.in_(shop_ids),
+                Order.status == OrderStatus.DELIVERED,
+            )
+            .group_by(Order.shop_id)
+        )
+        delivered_counts = {
+            shop_id: delivered_count
+            for shop_id, delivered_count in self.db.execute(delivered_orders_statement).all()
+        }
+
+        for shop in shops:
+            completed_orders_count = int(delivered_counts.get(shop.id, 0))
+            setattr(shop, "completed_orders_count", completed_orders_count)
+            setattr(shop, "popularity_badge", self._resolve_popularity_badge(shop, completed_orders_count))
+
+    def _resolve_popularity_badge(self, shop: Shop, completed_orders_count: int) -> str | None:
+        rating = float(shop.rating or Decimal("0"))
+        reviews_count = int(shop.reviews_count or 0)
+
+        if completed_orders_count >= 15 and rating >= 4.6:
+            return "best_seller"
+        if reviews_count >= 6 and rating >= 4.5:
+            return "most_popular"
+        return None
+
+    def _sort_shops(self, shops: list[Shop]) -> list[Shop]:
+        return sorted(shops, key=self._shop_sort_key, reverse=True)
+
+    def _shop_sort_key(self, shop: Shop) -> tuple[int, int, int, float, int, float]:
+        created_at_timestamp = shop.created_at.timestamp() if shop.created_at else 0.0
+        return (
+            int(self._is_shop_premium_active(shop)),
+            self._badge_priority(getattr(shop, "popularity_badge", None)),
+            int(bool(shop.is_verified)),
+            float(shop.rating or Decimal("0")),
+            int(shop.reviews_count or 0),
+            created_at_timestamp,
+        )
+
+    def _is_shop_premium_active(self, shop: Shop) -> bool:
+        if not shop.is_premium:
+            return False
+        if shop.premium_until is None:
+            return True
+        return shop.premium_until > datetime.now(timezone.utc)
+
+    def _badge_priority(self, badge: str | None) -> int:
+        if badge == "best_seller":
+            return 2
+        if badge == "most_popular":
+            return 1
+        return 0

@@ -1,7 +1,8 @@
 import uuid
+from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import ForeignKey, Numeric, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -28,6 +29,9 @@ class Shop(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     working_hours: Mapped[str | None] = mapped_column(String(255), nullable=True)
     rating: Mapped[Decimal] = mapped_column(Numeric(2, 1), nullable=False, default=Decimal("0.0"), server_default="0")
     reviews_count: Mapped[int] = mapped_column(nullable=False, default=0, server_default="0")
+    is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    is_premium: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    premium_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[ShopStatus] = mapped_column(
         sql_enum(ShopStatus, "shop_status"),
         nullable=False,

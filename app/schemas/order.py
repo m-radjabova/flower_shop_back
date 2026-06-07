@@ -27,6 +27,7 @@ class OrderCreate(ORMModel):
     address: str | None = Field(default=None, max_length=255)
     payment_method: str = Field(min_length=2, max_length=50)
     note: str | None = None
+    gift_message: str | None = None
     items: list[OrderItemCreate] = Field(min_length=1)
 
 
@@ -61,4 +62,5 @@ class OrderOut(TimestampedSchema):
     status: OrderStatus
     total_price: Decimal
     note: str | None = None
+    gift_message: str | None = None
     items: list[OrderItemOut]

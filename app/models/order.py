@@ -34,6 +34,7 @@ class Order(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     total_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    gift_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     user = relationship("User", back_populates="orders")
     shop = relationship("Shop", back_populates="orders")

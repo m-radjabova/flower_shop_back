@@ -37,6 +37,7 @@ class Settings(BaseModel):
             "http://localhost:3000",
             "http://localhost:8081",
             "http://127.0.0.1:8081",
+            "https://flower-shop-back-5q3y.onrender.com",
         ],
     )
     AUTO_CREATE_TABLES: bool = os.getenv("AUTO_CREATE_TABLES", "").strip().lower() in {"1", "true", "yes"}

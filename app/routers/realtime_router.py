@@ -72,3 +72,48 @@ async def orders_websocket(
         pass
     finally:
         realtime_manager.disconnect(websocket)
+
+
+@router.websocket('/ws/support')
+async def support_websocket(
+    websocket: WebSocket,
+    token: str | None = Query(default=None),
+    scope: str = Query(default='me'),
+):
+    db = SessionLocal()
+    try:
+        user = _resolve_user_from_token(token, db)
+        if not user:
+            await websocket.close(code=4401)
+            return
+
+        channels: list[str] = []
+        if scope == 'me':
+            if not user.has_role(UserRole.OWNER):
+                await websocket.close(code=4403)
+                return
+            channels.append(f'support:owner:{user.id}')
+        elif scope == 'admin':
+            if not user.has_role(UserRole.ADMIN):
+                await websocket.close(code=4403)
+                return
+            channels.append('support:admin')
+        else:
+            await websocket.close(code=1008)
+            return
+    except HTTPException as exc:
+        close_code = 4403 if exc.status_code == 403 else 4401
+        await websocket.close(code=close_code)
+        return
+    finally:
+        db.close()
+
+    await realtime_manager.connect(websocket, channels)
+
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        realtime_manager.disconnect(websocket)

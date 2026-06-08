@@ -5,6 +5,7 @@ from app.models.order import Order, OrderItem
 from app.models.review import Review
 from app.models.shop import Shop
 from app.models.shop_application import ShopApplication
+from app.models.support_chat import SupportChat, SupportMessage
 from app.models.important_date import ImportantDate
 from app.models.user import User
 
@@ -17,6 +18,8 @@ __all__ = [
     "Review",
     "Shop",
     "ShopApplication",
+    "SupportChat",
+    "SupportMessage",
     "ImportantDate",
     "User",
 ]

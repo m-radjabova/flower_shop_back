@@ -9,5 +9,6 @@ from app.routers.realtime_router import router as realtime_router
 from app.routers.review_router import router as review_router
 from app.routers.shop_router import router as shop_router
 from app.routers.shop_application_router import router as shop_application_router
+from app.routers.support_chat_router import router as support_chat_router
 from app.routers.upload_router import router as upload_router
 from app.routers.user_router import router as user_router

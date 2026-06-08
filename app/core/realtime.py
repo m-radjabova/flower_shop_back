@@ -7,7 +7,9 @@ from typing import Iterable
 from fastapi import WebSocket
 
 from app.models.order import Order
+from app.models.support_chat import SupportChat, SupportMessage
 from app.schemas.order import OrderOut
+from app.schemas.support_chat import SupportRealtimePayload
 
 
 @dataclass(slots=True)
@@ -90,3 +92,69 @@ async def broadcast_order_event(order: Order, event: str) -> None:
         'event': message.event,
         'order': message.order,
     })
+
+
+def _serialize_support_message(message: SupportMessage | None) -> dict | None:
+    if not message:
+        return None
+
+    return {
+        "id": message.id,
+        "chat_id": message.chat_id,
+        "sender_id": message.sender_id,
+        "sender_role": message.sender.role,
+        "body": message.body,
+        "attachment_url": message.attachment_url,
+        "attachment_file_id": message.attachment_file_id,
+        "attachment_name": message.attachment_name,
+        "attachment_content_type": message.attachment_content_type,
+        "attachment_size": message.attachment_size,
+        "is_read_by_owner": message.is_read_by_owner,
+        "is_read_by_admin": message.is_read_by_admin,
+        "sender": {
+            "id": message.sender.id,
+            "full_name": message.sender.full_name,
+            "email": message.sender.email,
+            "role": message.sender.role,
+            "avatar_url": message.sender.avatar_url,
+        },
+        "created_at": message.created_at,
+        "updated_at": message.updated_at,
+    }
+
+
+def _serialize_support_chat(chat: SupportChat, message: SupportMessage | None = None) -> dict:
+    messages = sorted(chat.messages, key=lambda item: item.created_at)
+    last_message = message or (messages[-1] if messages else None)
+    return {
+        "id": chat.id,
+        "owner_id": chat.owner_id,
+        "owner": {
+            "id": chat.owner.id,
+            "full_name": chat.owner.full_name,
+            "email": chat.owner.email,
+            "phone": chat.owner.phone,
+            "avatar_url": chat.owner.avatar_url,
+        },
+        "last_message": _serialize_support_message(last_message),
+        "unread_count": 0,
+        "created_at": chat.created_at,
+        "updated_at": chat.updated_at,
+    }
+
+
+async def broadcast_support_chat_event(
+    chat: SupportChat,
+    message: SupportMessage | None,
+    event: str,
+) -> None:
+    payload = SupportRealtimePayload(
+        event=event,
+        chat=_serialize_support_chat(chat, message),
+        message=_serialize_support_message(message),
+        emitted_at=chat.updated_at,
+    ).model_dump(mode="json")
+    await realtime_manager.broadcast_many(
+        {f"support:owner:{chat.owner_id}", "support:admin"},
+        payload,
+    )

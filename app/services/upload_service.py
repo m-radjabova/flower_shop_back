@@ -6,13 +6,26 @@ import httpx
 from fastapi import UploadFile
 
 from app.core.config import settings
-from app.schemas.upload import ImageUploadOut
+from app.schemas.upload import FileUploadOut, ImageUploadOut
 from app.services.base import BaseService
 
 
 class UploadService(BaseService):
     allowed_content_types = {"image/jpeg", "image/png", "image/webp", "image/gif"}
     max_file_size = 6 * 1024 * 1024
+    allowed_chat_content_types = {
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/gif",
+        "application/pdf",
+        "text/plain",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    }
+    max_chat_file_size = 15 * 1024 * 1024
 
     async def upload_image(self, file: UploadFile, folder: str = "/flower-shop/reviews") -> ImageUploadOut:
         if not settings.IMAGEKIT_PRIVATE_KEY:
@@ -50,6 +63,46 @@ class UploadService(BaseService):
             file_id=data["fileId"],
             name=data["name"],
             thumbnail_url=data.get("thumbnailUrl"),
+        )
+
+    async def upload_chat_file(self, file: UploadFile, folder: str = "/flower-shop/support") -> FileUploadOut:
+        if not settings.IMAGEKIT_PRIVATE_KEY:
+            raise self.bad_request("ImageKit private key sozlanmagan")
+        if file.content_type not in self.allowed_chat_content_types:
+            raise self.bad_request("Faqat rasm, PDF, TXT, DOC yoki XLS fayl yuborish mumkin")
+
+        content = await file.read()
+        if not content:
+            raise self.bad_request("Fayl bo'sh")
+        if len(content) > self.max_chat_file_size:
+            raise self.bad_request("Fayl hajmi 15MB dan oshmasligi kerak")
+
+        safe_filename = self._safe_filename(file.filename or "support-file")
+        encoded_file = base64.b64encode(content).decode("utf-8")
+
+        async with httpx.AsyncClient(timeout=45) as client:
+            response = await client.post(
+                "https://upload.imagekit.io/api/v1/files/upload",
+                data={
+                    "file": encoded_file,
+                    "fileName": f"{uuid4().hex}-{safe_filename}",
+                    "folder": folder,
+                    "useUniqueFileName": "true",
+                },
+                auth=(settings.IMAGEKIT_PRIVATE_KEY, ""),
+            )
+
+        if response.status_code >= 400:
+            raise self.bad_request("Faylni ImageKit'ga yuklab bo'lmadi")
+
+        data = response.json()
+        return FileUploadOut(
+            url=data["url"],
+            file_id=data["fileId"],
+            name=data["name"],
+            thumbnail_url=data.get("thumbnailUrl"),
+            content_type=file.content_type or "application/octet-stream",
+            size=len(content),
         )
 
     async def delete_image(self, file_id: str, *, ignore_missing: bool = False) -> None:

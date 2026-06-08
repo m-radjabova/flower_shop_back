@@ -37,6 +37,7 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     addresses = relationship("Address", back_populates="user", cascade="all, delete-orphan")
     important_dates = relationship("ImportantDate", back_populates="user", cascade="all, delete-orphan")
     shop_applications = relationship("ShopApplication", back_populates="user", cascade="all, delete-orphan")
+    support_chats = relationship("SupportChat", back_populates="owner", cascade="all, delete-orphan")
     referred_by = relationship("User", remote_side="User.id", back_populates="referred_users")
     referred_users = relationship("User", back_populates="referred_by")
 

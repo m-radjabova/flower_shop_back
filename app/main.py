@@ -16,6 +16,7 @@ from app.routers import (
     review_router,
     shop_router,
     shop_application_router,
+    support_chat_router,
     upload_router,
     user_router,
 )
@@ -41,6 +42,7 @@ app.include_router(bouquet_router)
 app.include_router(order_router)
 app.include_router(referral_router)
 app.include_router(review_router)
+app.include_router(support_chat_router)
 app.include_router(upload_router)
 app.include_router(realtime_router)
 

@@ -6,3 +6,8 @@ class ImageUploadOut(ORMModel):
     file_id: str
     name: str
     thumbnail_url: str | None = None
+
+
+class FileUploadOut(ImageUploadOut):
+    content_type: str
+    size: int

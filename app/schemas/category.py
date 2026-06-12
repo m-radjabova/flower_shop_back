@@ -8,6 +8,7 @@ from app.schemas.common import ORMModel, TimestampedSchema
 class CategoryCreate(ORMModel):
     name: str = Field(min_length=2, max_length=100)
     slug: str | None = Field(default=None, min_length=2, max_length=120)
+    description: str | None = None
     image: str = Field(min_length=5, max_length=500)
     is_active: bool = True
 
@@ -15,6 +16,7 @@ class CategoryCreate(ORMModel):
 class CategoryUpdate(ORMModel):
     name: str | None = Field(default=None, min_length=2, max_length=100)
     slug: str | None = Field(default=None, min_length=2, max_length=120)
+    description: str | None = None
     image: str | None = Field(default=None, min_length=5, max_length=500)
     is_active: bool | None = None
 
@@ -22,6 +24,7 @@ class CategoryUpdate(ORMModel):
 class CategoryOut(TimestampedSchema):
     name: str
     slug: str
+    description: str | None = None
     image: str | None = None
     is_active: bool
 
@@ -30,3 +33,4 @@ class CategorySummary(ORMModel):
     id: UUID
     name: str
     slug: str
+    description: str | None = None

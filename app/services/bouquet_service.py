@@ -104,13 +104,20 @@ class BouquetService(BaseService):
             statement = statement.where(Bouquet.category_id == self.parse_uuid(category_id, "Kategoriya ID"))
         if not include_hidden:
             statement = statement.where(Bouquet.status == BouquetStatus.ACTIVE)
-        if search:
-            query = f"%{search.strip().lower()}%"
+        normalized_search = search.strip().lower() if search else ""
+        if normalized_search:
+            query = f"%{normalized_search}%"
+            statement = statement.outerjoin(Bouquet.category).outerjoin(Bouquet.shop)
             statement = statement.where(
                 or_(
                     func.lower(Bouquet.name).like(query),
+                    func.lower(Bouquet.slug).like(query),
                     func.lower(Bouquet.description).like(query),
                     func.lower(Bouquet.compound).like(query),
+                    func.lower(Category.name).like(query),
+                    func.lower(Category.slug).like(query),
+                    func.lower(Shop.name).like(query),
+                    func.lower(Shop.slug).like(query),
                 )
             )
         return statement

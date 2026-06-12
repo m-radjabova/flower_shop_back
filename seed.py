@@ -343,12 +343,12 @@ def seed_catalog(db) -> None:
     }
 
     category_payloads = [
-        {"name": "Roses", "slug": "roses", "image": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?auto=format&fit=crop&w=500&q=80", "is_active": True},
-        {"name": "Birthday", "slug": "birthday", "image": "https://images.unsplash.com/photo-1464195244916-405fa0a82545?auto=format&fit=crop&w=500&q=80", "is_active": True},
-        {"name": "Anniversary", "slug": "anniversary", "image": "https://images.unsplash.com/photo-1520763185298-1b434c919102?auto=format&fit=crop&w=500&q=80", "is_active": True},
-        {"name": "Wedding", "slug": "wedding", "image": "https://images.unsplash.com/photo-1525258946800-98cfd641d0de?auto=format&fit=crop&w=500&q=80", "is_active": True},
-        {"name": "New Baby", "slug": "new-baby", "image": "https://images.unsplash.com/photo-1516589091380-5d6017b7c32f?auto=format&fit=crop&w=500&q=80", "is_active": True},
-        {"name": "Get Well Soon", "slug": "get-well-soon", "image": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=500&q=80", "is_active": True},
+        {"name": "Roses", "slug": "roses", "description": "Classic rose bouquets for romantic gestures, elegant gifts, and timeless floral moments.", "image": "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?auto=format&fit=crop&w=500&q=80", "is_active": True},
+        {"name": "Birthday", "slug": "birthday", "description": "Bright, joyful bouquets made for candles, smiles, and memorable birthday surprises.", "image": "https://images.unsplash.com/photo-1464195244916-405fa0a82545?auto=format&fit=crop&w=500&q=80", "is_active": True},
+        {"name": "Anniversary", "slug": "anniversary", "description": "Romantic arrangements with a polished, heartfelt presence for meaningful milestones.", "image": "https://images.unsplash.com/photo-1520763185298-1b434c919102?auto=format&fit=crop&w=500&q=80", "is_active": True},
+        {"name": "Wedding", "slug": "wedding", "description": "Elegant florals for ceremonies, intimate vows, and refined celebration tables.", "image": "https://images.unsplash.com/photo-1525258946800-98cfd641d0de?auto=format&fit=crop&w=500&q=80", "is_active": True},
+        {"name": "New Baby", "slug": "new-baby", "description": "Soft, tender blooms to welcome a new life with warmth and sweetness.", "image": "https://images.unsplash.com/photo-1516589091380-5d6017b7c32f?auto=format&fit=crop&w=500&q=80", "is_active": True},
+        {"name": "Get Well Soon", "slug": "get-well-soon", "description": "Fresh, uplifting flowers chosen to bring comfort, color, and gentle energy.", "image": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=500&q=80", "is_active": True},
     ]
     category_map = {
         category_payload["slug"]: upsert_category(db, category_payload)

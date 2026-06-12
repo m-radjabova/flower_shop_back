@@ -19,6 +19,7 @@ class CategoryService(BaseService):
         category = Category(
             name=payload.name.strip(),
             slug=slug,
+            description=self._normalize_description(payload.description),
             image=self._normalize_category_image(payload.image, required=True),
             is_active=payload.is_active,
         )
@@ -31,6 +32,8 @@ class CategoryService(BaseService):
         data = payload.model_dump(exclude_unset=True)
         if "name" in data and data["name"] is not None:
             category.name = data["name"].strip()
+        if "description" in data:
+            category.description = self._normalize_description(data["description"])
         if "image" in data:
             category.image = self._normalize_category_image(data["image"], required=True)
         if "is_active" in data and data["is_active"] is not None:
@@ -74,3 +77,7 @@ class CategoryService(BaseService):
             raise self.bad_request("Category rasmi faqat upload orqali ImageKit'dan bo'lishi kerak")
 
         return normalized
+
+    def _normalize_description(self, description: str | None) -> str | None:
+        normalized = (description or "").strip()
+        return normalized or None

@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.dependencies.auth import get_current_user
+from app.dependencies.roles import require_roles
+from app.models.enums import UserRole
 from app.models.user import User
 from app.schemas.review import ReviewCreate, ReviewModerationUpdate, ReviewOut
 from app.services.review_service import ReviewService
@@ -30,7 +32,7 @@ def list_my_reviews(
 @router.get("/manage/shop/{shop_id}", response_model=list[ReviewOut])
 def list_managed_reviews(
     shop_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.OWNER)),
     db: Session = Depends(get_db),
 ):
     return ReviewService(db).list_managed_reviews(shop_id, current_user)
@@ -49,7 +51,7 @@ def create_review(
 def moderate_review(
     review_id: str,
     payload: ReviewModerationUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.OWNER)),
     db: Session = Depends(get_db),
 ):
     return ReviewService(db).moderate_review(review_id, current_user, payload)

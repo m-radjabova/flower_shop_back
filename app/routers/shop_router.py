@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.dependencies.auth import get_current_user, get_current_user_optional
+from app.dependencies.auth import get_current_user_optional
+from app.dependencies.roles import require_roles
 from app.models.enums import UserRole
 from app.models.user import User
 from app.schemas.shop import ShopCreate, ShopOut, ShopUpdate
@@ -32,7 +33,10 @@ def list_shops(
 
 
 @router.get("/me", response_model=list[ShopOut])
-def list_my_shops(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def list_my_shops(
+    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.OWNER)),
+    db: Session = Depends(get_db),
+):
     return ShopService(db).list_shops(include_inactive=True, owner_id=str(current_user.id))
 
 
@@ -44,7 +48,7 @@ def get_shop(slug: str, db: Session = Depends(get_db)):
 @router.post("", response_model=ShopOut)
 def create_shop(
     payload: ShopCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.OWNER)),
     db: Session = Depends(get_db),
 ):
     return ShopService(db).create_shop(current_user, payload)
@@ -54,7 +58,7 @@ def create_shop(
 def update_shop(
     shop_id: str,
     payload: ShopUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.OWNER)),
     db: Session = Depends(get_db),
 ):
     return ShopService(db).update_shop(shop_id, current_user, payload)

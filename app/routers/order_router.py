@@ -5,6 +5,8 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.dependencies.auth import get_current_user, get_current_user_optional
+from app.dependencies.roles import require_roles
+from app.models.enums import UserRole
 from app.models.user import User
 from app.schemas.order import OrderCreate, OrderOut, OrderStatusUpdate
 from app.services.order_service import OrderService
@@ -31,7 +33,7 @@ def list_my_orders(current_user: User = Depends(get_current_user), db: Session =
 @router.get("/shop/{shop_id}", response_model=list[OrderOut])
 def list_shop_orders(
     shop_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.OWNER)),
     db: Session = Depends(get_db),
 ):
     return OrderService(db).list_shop_orders(shop_id, current_user)
@@ -50,7 +52,7 @@ def get_order(
 async def update_order_status(
     order_id: str,
     payload: OrderStatusUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.OWNER)),
     db: Session = Depends(get_db),
 ):
     order = OrderService(db).update_order_status(order_id, current_user, payload)
